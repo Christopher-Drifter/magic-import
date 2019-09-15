@@ -1,16 +1,16 @@
-/* Imports
+/* Magic Import
  *
  * Automagically import files with simpler syntax, ignoring subdirectories in
  * nodejs. ALL FILENAMES MUST BE UNIQUE!
  *
- * Type:
+ * Use:
  *
- *    const { FileName, FileNameSubDir } = require("./imports");
+ *    const { Module, ModuleSubDir } = require("magic-import");
  *
  * instead of:
  *
- *   const FileName = require("./Filename"),
- *   const FileNameSubDir = require("./path/to/file/FileNameSubDir");
+ *   const Module = require("./Module"),
+ *   const ModuleSubDir = require("./path/to/file/ModuleSubDir");
  */
 
 /* Imports
@@ -45,11 +45,10 @@ const getFileKey = filepath => {
  */
 const filepathsByKey = {};
 const dir = process.cwd();
-const extensions = [".js", ".json"];
 
 /* Read all the .js/.json files in this directory and below it
  */
-const files = (function* walker(dir) {
+const filepaths = (function* walker(dir) {
    // ignore node modules
    if (isNodeModules(dir)) return;
 
@@ -73,7 +72,7 @@ const files = (function* walker(dir) {
 /* Add all paths to object in form key => filepath
  * eg. Filename => FileName.js
  */
-for (let filepath of files) {
+for (let filepath of filepaths) {
    const key = getFileKey(filepath);
    filepathsByKey[key] = filepath;
 }
