@@ -22,69 +22,71 @@ const path = require("path");
  */
 // returns true if dir contains /node_modules/
 const isNodeModules = dir => {
-   return `${dir}/`.match(/[\/\\]node_modules[\/\\]/);
+  return `${dir}/`.match(/[\/\\]node_modules[\/\\]/);
 };
 // returns absolute filepath from dir & file
 const getFilepath = (dir, file) => {
-   return path.join(dir, file);
+  return path.join(dir, file);
 };
 // returns true if filepath references a directory
 const isDirectory = filepath => {
-   return fs.statSync(filepath).isDirectory();
+  return fs.statSync(filepath).isDirectory();
 };
 // returns true if filepath references a javascript/json file
 const isJavascriptFile = filepath => {
-   return [".js", ".json"].includes(path.extname(filepath));
+  return [".js", ".json"].includes(path.extname(filepath));
 };
 // returns the file key (the filename without an extension)
 const getFileKey = filepath => {
-   return path.basename(filepath).replace(path.extname(filepath), "");
+  return path
+    .basename(filepath)
+    .replace(new RegExp(`${path.extname(filepath)}$`), "");
 };
 
-/* Setup/Config
+/* Initial Setup
  */
 const filepathsByKey = {};
 const dir = process.cwd();
 
-/* Read all the .js/.json files in this directory and below it
+/* Read all the javascript files in this directory and below it
  */
 const filepaths = (function* walker(dir) {
-   // ignore node modules
-   if (isNodeModules(dir)) return;
+  // ignore /node_modules/
+  if (isNodeModules(dir)) return;
 
-   const files = fs.readdirSync(dir);
+  // walk through directories recursively
+  const files = fs.readdirSync(dir);
+  for (const file of files) {
+    const filepath = getFilepath(dir, file);
 
-   for (const file of files) {
-      const filepath = getFilepath(dir, file);
+    if (isDirectory(filepath)) {
+      yield* walker(filepath);
+      continue;
+    }
 
-      if (isDirectory(filepath)) {
-         yield* walker(filepath);
-         continue;
-      }
-
-      if (isJavascriptFile(filepath)) {
-         yield filepath;
-         continue;
-      }
-   }
+    if (isJavascriptFile(filepath)) {
+      yield filepath;
+      continue;
+    }
+  }
 })(dir);
 
-/* Add all paths to object in form key => filepath
- * eg. Filename => FileName.js
+/* Add all paths to filepathsByKey
+ * eg. filepathsByKey["Filename"] = "FileName.js";
  */
 for (let filepath of filepaths) {
-   const key = getFileKey(filepath);
-   filepathsByKey[key] = filepath;
+  const key = getFileKey(filepath);
+  filepathsByKey[key] = filepath;
 }
 
 /* Use a proxy to require the filepath and return the module
  * when a property is requested on filepathsByKey object
  */
 const proxy = new Proxy(filepathsByKey, {
-   get: (filepathsByKey, key) => {
-      const path = filepathsByKey[key];
-      return path ? require(path) : undefined;
-   }
+  get(filepathsByKey, key) {
+    const path = filepathsByKey[key];
+    return path ? require(path) : undefined;
+  }
 });
 
 /* Exports
